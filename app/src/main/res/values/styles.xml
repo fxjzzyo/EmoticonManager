@@ -6,14 +6,16 @@
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
-        <!-- 修改toolbar图标的颜色-->
-        <item name="android:textColorSecondary">#ffffff</item>
-        <!--修改toolbar文字颜色-->
-        <item name="android:textColorPrimary">@color/white</item>
+
+        <!--按钮的样式-->
+        <item name="colorButtonNormal">@color/colorPrimary</item>
+        <item name="colorControlHighlight">@color/colorPrimaryDark</item>
     </style>
 
 
+    <style name="EmoticonTheme" parent="AppTheme"></style>
 
-
-
+    <style name="MyBtnStyle" parent="Widget.AppCompat.Button.Colored">
+        <item name="android:background">@color/colorPrimary</item>
+    </style>
 </resources>
