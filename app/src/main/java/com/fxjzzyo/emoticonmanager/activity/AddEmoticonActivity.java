@@ -18,6 +18,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -187,6 +188,7 @@ public class AddEmoticonActivity extends AppCompatActivity {
         Intent intent = new Intent("android.intent.action.GET_CONTENT");
         intent.setType("image/*");
         startActivityForResult(intent, CHOOSE_PHOTO);
+
     }
 
     private void startTake() {
@@ -222,7 +224,11 @@ public class AddEmoticonActivity extends AppCompatActivity {
                     // 将拍摄的照片显示出来
                     try {
                         Log.d(TAG, "----imageuri-----" + imageUri);
-                        mBitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri));
+                        Bitmap bm0 = BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri));
+                        // 旋转90度
+                        Matrix m = new Matrix();
+                        m.setRotate(90, (float) bm0.getWidth() / 2, (float) bm0.getHeight() / 2);
+                        mBitmap = Bitmap.createBitmap(bm0, 0, 0, bm0.getWidth(), bm0.getHeight(), m, true);
                         ivImg.setImageBitmap(mBitmap);
                         isTakePhoto = true;
 
@@ -238,8 +244,10 @@ public class AddEmoticonActivity extends AppCompatActivity {
                         Log.d(TAG, "大于19的 api");
                         handleImageOnKitKat(data);
                     } else {
+                        Log.d(TAG, "小于19的 api");
                         // 4.4及以下系统使用下面方法处理图片
                         handleImageBeforeKitKat(data);
+                        Log.d(TAG, "小于19的 api");
                     }
                 }
                 break;
