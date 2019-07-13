@@ -162,7 +162,7 @@ public class AddEmoticonActivity extends AppCompatActivity {
     }
 
     private String getImgFoldPath() {
-        return FileUtil.getSDcardRootPath() + File.separator + Constant.IMAGE_DIR_NAME;
+        return FileUtil.getFileRootPath(this) + File.separator + Constant.IMAGE_DIR_NAME;
     }
 
     private String saveImgToLocal(Bitmap bitmap) {
@@ -229,7 +229,8 @@ public class AddEmoticonActivity extends AppCompatActivity {
                         Matrix m = new Matrix();
                         m.setRotate(90, (float) bm0.getWidth() / 2, (float) bm0.getHeight() / 2);
                         mBitmap = Bitmap.createBitmap(bm0, 0, 0, bm0.getWidth(), bm0.getHeight(), m, true);
-                        ivImg.setImageBitmap(mBitmap);
+                        Glide.with(this).load(mBitmap).into(ivImg);
+//                        ivImg.setImageBitmap(mBitmap);
                         isTakePhoto = true;
 
                     } catch (FileNotFoundException e) {
@@ -302,7 +303,8 @@ public class AddEmoticonActivity extends AppCompatActivity {
 
         if (imagePath != null) {
             Bitmap bitmap = BitmapFactory.decodeFile(imagePath);
-            ivImg.setImageBitmap(bitmap);
+            Glide.with(this).load(imagePath).into(ivImg);
+//            ivImg.setImageBitmap(bitmap);
             this.mImagePath = imagePath;
             isTakePhoto = false;
         } else {

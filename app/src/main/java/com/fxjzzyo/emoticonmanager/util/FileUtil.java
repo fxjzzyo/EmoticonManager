@@ -1,8 +1,11 @@
 package com.fxjzzyo.emoticonmanager.util;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Environment;
 import android.util.Log;
+
+import com.fxjzzyo.emoticonmanager.MyApplication;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -29,18 +32,18 @@ public class FileUtil {
     }
 
     /**
-     * 在 sd 卡下创建一个文件
-     *
-     * @param filePath
+     * 获取应用相关的sd卡目录路径
+     * /storage/emulated/0/Android/data/包名/files
+     * 如果应用卸载了，那么它也没了
+     * @param context
+     * @return
      */
-    public static void createFileInSDcard(String filePath) {
-
+    public static String getFileRootPath(Context context){
+        return context.getExternalFilesDir(null).getAbsolutePath();
     }
-
 
     /**
      * 创建目录
-     *
      * @param path 目录的绝对路径
      * @return 创建成功则返回true
      */

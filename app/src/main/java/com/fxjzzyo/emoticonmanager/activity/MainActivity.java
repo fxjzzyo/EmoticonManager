@@ -30,6 +30,7 @@ import android.widget.Toast;
 import com.fxjzzyo.emoticonmanager.R;
 import com.fxjzzyo.emoticonmanager.adapter.EmoticonAdapter;
 import com.fxjzzyo.emoticonmanager.bean.EmoticonBean;
+import com.fxjzzyo.emoticonmanager.util.WXutil;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import org.litepal.LitePal;
@@ -76,9 +77,10 @@ public class MainActivity extends AppCompatActivity {
         mEmoticonAdapter.setOnItemlickListener(new EmoticonAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(View view, int position) {
-                // TODO
-                // 直接分享
-                Toast.makeText(MainActivity.this, "item clicked:" + position, Toast.LENGTH_SHORT).show();
+                // 分享给微信朋友
+                String imgPath = mEmoticonBeans.get(position).getEmoticonImgURI();
+                WXutil.shareImgToWx(MainActivity.this,imgPath);
+//                Toast.makeText(MainActivity.this, "item clicked:" + position, Toast.LENGTH_SHORT).show();
             }
         });
 
