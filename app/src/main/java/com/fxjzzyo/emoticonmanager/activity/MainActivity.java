@@ -56,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.fl_empty_container)
     FrameLayout flEmptyContainer;
 
-    private List<EmoticonBean> mEmoticonBeans;
+    private List<EmoticonBean> mEmoticonBeans = new ArrayList<>();;
 
     private EmoticonAdapter mEmoticonAdapter;
 
@@ -129,6 +129,7 @@ public class MainActivity extends AppCompatActivity {
                 LitePal.delete(EmoticonBean.class, bean.getId());
                 mEmoticonBeans.remove(position);
                 mEmoticonAdapter.notifyItemRemoved(position);
+                Constant.isDatabaseMotified = true;
             }
 
         })
@@ -177,7 +178,8 @@ public class MainActivity extends AppCompatActivity {
             SharedpreferencesUtil.saveBoolean(this,SharedpreferencesUtil.KEY_FIRST_LANUCH,Constant.isFirstLanch);
 
             boolean isBackupExist = FileUtil.isFileExist(FileUtil.getSDcardRootPath() +
-                    File.separator + Constant.APPLICATION_NAME + File.separator + Constant.DATABASE_NAME);
+                    File.separator + Constant.APPLICATION_NAME + File.separator + Constant.BACKUP_DIR_NAME
+                    +File.separator+Constant.DATABASE_NAME);
             Log.d(TAG,"---BAckup---exist---"+isBackupExist);
             if (isBackupExist) {
                 popRestoreDataDialog();
@@ -189,7 +191,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadDatas() {
-        mEmoticonBeans = new ArrayList<>();
+
         getDataFromDB();
     }
 
@@ -209,6 +211,7 @@ public class MainActivity extends AppCompatActivity {
                     public void backupSuccess(int type) {
                         if (type == BackupTask.RESTORE_SUCCESS) {
                             loadDatas();
+                            mEmoticonAdapter.notifyDataSetChanged();
                         }
                     }
 
@@ -223,9 +226,9 @@ public class MainActivity extends AppCompatActivity {
         builder.setNegativeButton("否", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
-                // 清空图片文件夹
+                // 删除备份文件夹以及图片文件夹
                 FileUtil.deleteDirection(new File(FileUtil.getSDcardRootPath()+File.separator+
-                        Constant.APPLICATION_NAME+File.separator+Constant.IMAGE_DIR_NAME));
+                        Constant.APPLICATION_NAME));
                 // 取消对话框
                 dialogInterface.dismiss();
                 // 正常初始化数据库
@@ -245,6 +248,7 @@ public class MainActivity extends AppCompatActivity {
         mEmoticonBeans.clear();
         mEmoticonBeans.addAll(emoticonBeans);
         checkEmpty();
+
     }
 
     @Override
