@@ -106,16 +106,19 @@ public class AddEmoticonActivity extends AppCompatActivity {
             imgPath = saveImgToLocal(mBitmap);
         } else {
             // 拷贝图片到本应用的图片目录下
-            imgPath = copyImgTolocal();
+            imgPath = copyImgToLocal();
         }
         this.mImagePath = imgPath;
         // 检查图片
-        if (checkImgEmpty()) {
+        if (!checkImg()) {
             return;
         }
         // 将图片路径写入数据库
-        writeImgPathToDB(imgPath);
-        setResult(RESULT_OK);
+        if(writeImgPathToDB(imgPath)){
+            setResult(RESULT_OK);
+        }else {
+            setResult(RESULT_CANCELED);
+        }
         // 返回 main activity
         this.finish();
     }
@@ -129,13 +132,16 @@ public class AddEmoticonActivity extends AppCompatActivity {
         return false;
     }
 
-    private boolean checkImgEmpty() {
+    private boolean checkImg() {
         if (TextUtils.isEmpty(mImagePath)) {
             Log.d(TAG, "--imgpath---" + mImagePath);
             Toast.makeText(this, "请添加图片~", Toast.LENGTH_SHORT).show();
-            return true;
+            return false;
+        }else if(mImagePath.equals("image_exist")){
+            Toast.makeText(this, "图片已存在~", Toast.LENGTH_SHORT).show();
+            return false;
         }
-        return false;
+        return true;
     }
 
     /**
@@ -143,26 +149,33 @@ public class AddEmoticonActivity extends AppCompatActivity {
      *
      * @param imgPath
      */
-    private void writeImgPathToDB(String imgPath) {
+    private boolean writeImgPathToDB(String imgPath) {
         Log.d(TAG, "--todb--img--path---" + imgPath);
         EmoticonBean emoticonBean = new EmoticonBean();
         emoticonBean.setEmoticonContent(mImgContent);
         emoticonBean.setEmoticonImgURI(imgPath);
-        emoticonBean.save();
+        return emoticonBean.save();
     }
 
-    private String copyImgTolocal() {
+    private String copyImgToLocal() {
         if (mImagePath != null) {
-            if (FileUtil.copyFile(mImagePath, getImgFoldPath())) {
+            int copyResult = FileUtil.copyImageFile(mImagePath, getImgFoldPath());
+            if ( 1 == copyResult) {
                 String imgName = mImagePath.substring(mImagePath.lastIndexOf("/"));
                 return getImgFoldPath() + imgName;
+            }else if(2 == copyResult){
+                return "image_exist";
+            }else if(0 == copyResult){
+                return "image_exist";
             }
         }
         return null;
     }
 
     private String getImgFoldPath() {
-        return FileUtil.getFileRootPath(this) + File.separator + Constant.IMAGE_DIR_NAME;
+        // /storage/emulated/0/EmoticonManager/EmoticonManagerImages
+        return FileUtil.getSDcardRootPath() + File.separator + Constant.APPLICATION_NAME
+                +File.separator+Constant.IMAGE_DIR_NAME;
     }
 
     private String saveImgToLocal(Bitmap bitmap) {

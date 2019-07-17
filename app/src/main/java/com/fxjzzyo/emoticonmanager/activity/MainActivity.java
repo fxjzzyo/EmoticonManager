@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.Manifest;
+import android.app.ProgressDialog;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -30,11 +31,16 @@ import android.widget.Toast;
 import com.fxjzzyo.emoticonmanager.R;
 import com.fxjzzyo.emoticonmanager.adapter.EmoticonAdapter;
 import com.fxjzzyo.emoticonmanager.bean.EmoticonBean;
+import com.fxjzzyo.emoticonmanager.util.BackupTask;
+import com.fxjzzyo.emoticonmanager.util.Constant;
+import com.fxjzzyo.emoticonmanager.util.FileUtil;
+import com.fxjzzyo.emoticonmanager.util.SharedpreferencesUtil;
 import com.fxjzzyo.emoticonmanager.util.WXutil;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import org.litepal.LitePal;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,11 +68,13 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         ButterKnife.bind(this);
+        // 申请权限，并跳转到添加表情界面
+        requestCameraPermission();
+    }
 
+    private void init() {
         initDatas();
         initEvents();
-
-
     }
 
     private void initEvents() {
@@ -79,7 +87,7 @@ public class MainActivity extends AppCompatActivity {
             public void onItemClick(View view, int position) {
                 // 分享给微信朋友
                 String imgPath = mEmoticonBeans.get(position).getEmoticonImgURI();
-                WXutil.shareImgToWx(MainActivity.this,imgPath);
+                WXutil.shareImgToWx(MainActivity.this, imgPath);
 //                Toast.makeText(MainActivity.this, "item clicked:" + position, Toast.LENGTH_SHORT).show();
             }
         });
@@ -95,8 +103,8 @@ public class MainActivity extends AppCompatActivity {
         mFloatBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                // 申请权限，并跳转到添加表情界面
-                requestCameraPermission();
+                // 跳转到添加表情界面
+                jumpToAddActivity();
             }
         });
 
@@ -105,7 +113,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void popDialog(EmoticonBean bean, int position) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        View view = getLayoutInflater().inflate(R.layout.alert_dialog_layout,null);
+        View view = getLayoutInflater().inflate(R.layout.alert_dialog_layout, null);
         EditText editText = view.findViewById(R.id.et_img_content);
         editText.setText(bean.getEmoticonContent());
         editText.setTextColor(Color.BLACK);
@@ -133,6 +141,7 @@ public class MainActivity extends AppCompatActivity {
                             emoticonBean.update(bean.getId());
                             mEmoticonBeans.get(position).setEmoticonContent(newText);
                             mEmoticonAdapter.notifyItemChanged(position);
+                            Constant.isDatabaseMotified = true;
                         }
                     }
                 })
@@ -155,9 +164,77 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void initDatas() {
+        Log.d(TAG,"-------INITdatas------------");
+        // 如果是安装后第一次启动应用，则检查是否有数据库备份文件
+        // 取 sharepreference 赋值(Constant.isFirstLanch = true;
+        Constant.isFirstLanch = SharedpreferencesUtil.getBoolean(this,SharedpreferencesUtil.KEY_FIRST_LANUCH);
+        Log.d(TAG,"-------INITdatas------------"+Constant.isFirstLanch);
 
+        if (Constant.isFirstLanch) {
+
+            Constant.isFirstLanch = false;
+            // 存 sharepreference false
+            SharedpreferencesUtil.saveBoolean(this,SharedpreferencesUtil.KEY_FIRST_LANUCH,Constant.isFirstLanch);
+
+            boolean isBackupExist = FileUtil.isFileExist(FileUtil.getSDcardRootPath() +
+                    File.separator + Constant.APPLICATION_NAME + File.separator + Constant.DATABASE_NAME);
+            Log.d(TAG,"---BAckup---exist---"+isBackupExist);
+            if (isBackupExist) {
+                popRestoreDataDialog();
+                return;
+            }
+
+        }
+        loadDatas();
+    }
+
+    private void loadDatas() {
         mEmoticonBeans = new ArrayList<>();
         getDataFromDB();
+    }
+
+    /**
+     * 弹出是否恢复数据库数据对话框
+     */
+    private void popRestoreDataDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("提示");
+        builder.setMessage("检测到上次安装添加的表情数据文件，是否恢复？");
+        builder.setPositiveButton("是", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                BackupTask backupTask = new BackupTask(MainActivity.this);
+                backupTask.setBackupResultListener(new BackupTask.IBackupResultListener() {
+                    @Override
+                    public void backupSuccess(int type) {
+                        if (type == BackupTask.RESTORE_SUCCESS) {
+                            loadDatas();
+                        }
+                    }
+
+                    @Override
+                    public void backupFailed(int type) {
+                        loadDatas();
+                    }
+                });
+                backupTask.execute(BackupTask.COMMAND_RESTORE);
+            }
+        });
+        builder.setNegativeButton("否", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                // 清空图片文件夹
+                FileUtil.deleteDirection(new File(FileUtil.getSDcardRootPath()+File.separator+
+                        Constant.APPLICATION_NAME+File.separator+Constant.IMAGE_DIR_NAME));
+                // 取消对话框
+                dialogInterface.dismiss();
+                // 正常初始化数据库
+                loadDatas();
+            }
+        });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
     /**
@@ -242,11 +319,11 @@ public class MainActivity extends AppCompatActivity {
                                     Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
                 }
             } else {
-                jumpToAddActivity();
+                init();
             }
         } else {
             Log.i("tag", "手机是6.0以下的，不需要权限");
-            jumpToAddActivity();
+            init();
         }
 
     }
@@ -259,6 +336,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         if (resultCode == RESULT_OK) {
+            Log.d(TAG,"----ACTIVITYRESULT---");
+            Constant.isDatabaseMotified = true;
             EmoticonBean bean = LitePal.findLast(EmoticonBean.class);
             mEmoticonBeans.add(bean);
             mEmoticonAdapter.notifyItemInserted(mEmoticonBeans.size() - 1);
@@ -273,16 +352,12 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 1) {
             for (int i = 0; i < permissions.length; i++) {
-                if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
-                    if (i == 0) {
-                        Log.i("tag", "申请权限成功");
-                        jumpToAddActivity();
-                    }
-                } else {
+                if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
                     Log.i("tag", "" + "权限" + permissions[i] + "申请失败");
                     Toast.makeText(this, "" + "权限" + permissions[i] + "申请失败", Toast.LENGTH_SHORT).show();
                 }
             }
+            init();
         }
     }
 
@@ -295,6 +370,38 @@ public class MainActivity extends AppCompatActivity {
         } else {
             flEmptyContainer.setVisibility(View.GONE);
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+        Log.d(TAG,"---db--motified---"+Constant.isDatabaseMotified);
+        if(Constant.isDatabaseMotified){
+            ProgressDialog dialog = new ProgressDialog(this);
+            dialog.setTitle("数据备份中...");
+            dialog.setCancelable(false);
+            BackupTask backupTask = new BackupTask(this);
+            backupTask.setBackupResultListener(new BackupTask.IBackupResultListener() {
+                @Override
+                public void backupSuccess(int type) {
+                    if(type == BackupTask.BACKUP_SUCCESS){
+                        dialog.dismiss();
+                        MainActivity.this.finish();
+                    }
+                }
+
+                @Override
+                public void backupFailed(int type) {
+                    dialog.dismiss();
+                    MainActivity.this.finish();
+                }
+            });
+            backupTask.execute(BackupTask.COMMAND_BACKUP);
+            dialog.show();
+
+        }else {
+            super.onBackPressed();
+        }
+
     }
 
 }

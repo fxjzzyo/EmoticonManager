@@ -13,6 +13,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.channels.FileChannel;
 
 /**
  * Created by fanlulin on 2019-07-08.
@@ -50,7 +51,7 @@ public class FileUtil {
     public static boolean createFolder(String path) {
         File file = new File(path);
         if (!file.exists()) {
-            return file.mkdir();
+            return file.mkdirs();
         } else {
             return true;
         }
@@ -90,6 +91,16 @@ public class FileUtil {
     }
 
     /**
+     * 判断某个文件是否存在
+     * @param filePath
+     * @return
+     */
+    public static boolean isFileExist(String filePath){
+         File file = new File(filePath);
+        return file.exists();
+    }
+
+    /**
      * 删除一个目录（可以是非空目录）
      *
      * @param dir 目录绝对路径
@@ -110,36 +121,60 @@ public class FileUtil {
     }
 
     /**
+     * 拷贝一个文件到另一个文件
+     * @param srcPath
+     * @param destDirPath
+     * @return
+     * @throws IOException
+     */
+    public static boolean copyFile(String srcPath, String destDirPath) throws IOException {
+        FileChannel inChannel = new FileInputStream(new File(srcPath)).getChannel();
+        FileChannel outChannel = new FileOutputStream(new File(destDirPath)).getChannel();
+        try {
+            inChannel.transferTo(0, inChannel.size(), outChannel);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            if (inChannel != null) {
+                inChannel.close();
+            }
+            if (outChannel != null) {
+                outChannel.close();
+            }
+        }
+        return true;
+    }
+
+    /**
      * 拷贝文件
-     *
      * @param srcPath     绝对路径
      * @param destDirPath 目标文件所在目录的路径
-     * @return boolean true拷贝成功
+     * @return int true拷贝成功 0:拷贝失败；1：拷贝成功；2：图片已存在
      */
-    public static boolean copyFile(String srcPath, String destDirPath) {
-        boolean flag = false;
+    public static int copyImageFile(String srcPath, String destDirPath) {
         File srcFile = new File(srcPath); // 源文件
         if (!srcFile.exists()) {
             Log.d(TAG, "源文件不存在");
-            return false;
+            return 0;
         }
         // 获取待复制文件的文件名
         String fileName = srcPath.substring(srcPath.lastIndexOf(File.separator));
 
         if (!createFolder(destDirPath)) {
             Log.d(TAG, "创建目标文件目录失败");
-            return false;
+            return 0;
         }
 
         String destPath = destDirPath + fileName;
         if (destPath.equals(srcPath)) {
             Log.d(TAG, "源文件路径和目标文件路径重复");
-            return true;
+            return 2;
         }
         File destFile = new File(destPath); // 目标文件
         if (destFile.exists() && destFile.isFile()) {
             Log.d(TAG, "该路径下已经有一个同名文件");
-            return true;
+            return 2;
         }
 
 
@@ -153,11 +188,10 @@ public class FileUtil {
             }
             fis.close();
             fos.close();
-            flag = true;
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return flag;
+        return 1;
     }
 
     /**
