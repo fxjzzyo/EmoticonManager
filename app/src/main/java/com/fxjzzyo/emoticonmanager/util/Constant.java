@@ -13,11 +13,13 @@ public class Constant {
     public static volatile boolean isNetAvaiable = true;// 网络是否可用
 
     // 标识每次进入程序（为了不toast网络情况）
-    public static  boolean isFirstIn= true;
+    public static boolean isFirstIn = true;
 
     // 安装后第一次启动该应用
-    public static  boolean isFirstLanch= true;
+    public static boolean isFirstLanch = true;
 
     // 数据库是否改动过，如果有改动则退出程序时备份数据库
-    public static  boolean isDatabaseMotified= false;
+    public static boolean isDatabaseMotified = false;
+
+    public static int PAGE_COUNT = 20;// 一次从数据库加载的数据个数
 }

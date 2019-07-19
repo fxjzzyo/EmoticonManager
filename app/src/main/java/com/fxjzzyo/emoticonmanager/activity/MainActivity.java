@@ -1,5 +1,6 @@
 package com.fxjzzyo.emoticonmanager.activity;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
@@ -39,6 +40,7 @@ import com.fxjzzyo.emoticonmanager.util.WXutil;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import org.litepal.LitePal;
+import org.litepal.crud.LitePalSupport;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -57,9 +59,11 @@ public class MainActivity extends AppCompatActivity {
     FrameLayout flEmptyContainer;
 
     private List<EmoticonBean> mEmoticonBeans = new ArrayList<>();
-    ;
-
     private EmoticonAdapter mEmoticonAdapter;
+    private GridLayoutManager mGridLayoutManager;
+
+    private int pageCount = Constant.PAGE_COUNT;// 一次从数据库加载的数据个数
+    private int lastVisibleItem;
 
 
     @Override
@@ -69,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         ButterKnife.bind(this);
-        // 申请权限，并跳转到添加表情界面
+        // 申请权限
         requestCameraPermission();
     }
 
@@ -79,8 +83,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initEvents() {
-        mEmoticonAdapter = new EmoticonAdapter(mEmoticonBeans);
-        mRecycleView.setLayoutManager(new GridLayoutManager(this, 2));
+        mEmoticonAdapter = new EmoticonAdapter(this, mEmoticonBeans, mEmoticonBeans.size() > 0 ? true : false);
+        mGridLayoutManager = new GridLayoutManager(this, 2);
+        mRecycleView.setLayoutManager(mGridLayoutManager);
         mRecycleView.setAdapter(mEmoticonAdapter);
 
         mEmoticonAdapter.setOnItemlickListener(new EmoticonAdapter.OnItemClickListener() {
@@ -89,10 +94,8 @@ public class MainActivity extends AppCompatActivity {
                 // 分享给微信朋友
                 String imgPath = mEmoticonBeans.get(position).getEmoticonImgURI();
                 WXutil.shareImgToWx(MainActivity.this, imgPath);
-//                Toast.makeText(MainActivity.this, "item clicked:" + position, Toast.LENGTH_SHORT).show();
             }
         });
-
 
         mEmoticonAdapter.setOnItemLongClickListener(new EmoticonAdapter.OnItemLongClickListener() {
             @Override
@@ -109,7 +112,31 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        checkEmpty();
 
+        mRecycleView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    if (mEmoticonAdapter.isFootHide() == false && lastVisibleItem + 1 == mEmoticonAdapter.getItemCount()) {
+                        updateRecyclerView(mEmoticonAdapter.getRealItemCount(), pageCount);
+                    }
+
+                    if (mEmoticonAdapter.isFootHide() == true && lastVisibleItem + 2 == mEmoticonAdapter.getItemCount()) {
+                        updateRecyclerView(mEmoticonAdapter.getRealItemCount(), pageCount);
+                    }
+                }
+
+
+            }
+
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                lastVisibleItem = mGridLayoutManager.findLastVisibleItemPosition();
+            }
+        });
     }
 
     private void popDialog(EmoticonBean bean, int position) {
@@ -128,9 +155,9 @@ public class MainActivity extends AppCompatActivity {
                     DialogInterface dialog,
                     int which) {// 确定按钮的响应事件
                 LitePal.delete(EmoticonBean.class, bean.getId());
-                mEmoticonBeans.remove(position);
-                mEmoticonAdapter.notifyItemRemoved(position);
+                mEmoticonAdapter.removeItem(position);
                 Constant.isDatabaseMotified = true;
+                checkEmpty();
             }
 
         })
@@ -141,8 +168,7 @@ public class MainActivity extends AppCompatActivity {
                             EmoticonBean emoticonBean = new EmoticonBean();
                             emoticonBean.setEmoticonContent(newText);
                             emoticonBean.update(bean.getId());
-                            mEmoticonBeans.get(position).setEmoticonContent(newText);
-                            mEmoticonAdapter.notifyItemChanged(position);
+                            mEmoticonAdapter.updateItem(emoticonBean, position);
                             Constant.isDatabaseMotified = true;
                         }
                     }
@@ -188,8 +214,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadDatas() {
-
-        getDataFromDB();
+        List<EmoticonBean> pageDataFromDB = getPageDataFromDB(0, pageCount);
+        mEmoticonBeans.addAll(pageDataFromDB);
     }
 
     /**
@@ -197,8 +223,8 @@ public class MainActivity extends AppCompatActivity {
      */
     private void popRestoreDataDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("提示");
-        builder.setMessage("检测到上次安装添加的表情数据文件，是否恢复？");
+        builder.setTitle("提示!");
+        builder.setMessage("检测到上次安装添加的表情\n是否恢复？");
         builder.setPositiveButton("是", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
@@ -238,31 +264,29 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
+
     /**
-     * 从数据库获取数据
+     * 从数据库分页获取数据
+     * @param startIndex
+     * @param pageCount
+     * @return
      */
-    private void getDataFromDB() {
-        List<EmoticonBean> emoticonBeans = LitePal.findAll(EmoticonBean.class);
-        mEmoticonBeans.clear();
-        mEmoticonBeans.addAll(emoticonBeans);
-        checkEmpty();
+    private List<EmoticonBean> getPageDataFromDB(int startIndex, int pageCount) {
+        List<EmoticonBean> emoticonBeans = LitePal.select(null)
+                .limit(pageCount).offset(startIndex).find(EmoticonBean.class);
 
+        return emoticonBeans;
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
+    public void updateRecyclerView(int startIndex, int pageCount) {
+        List<EmoticonBean> pageDataFromDB = getPageDataFromDB(startIndex, pageCount);
+        if (pageDataFromDB != null && pageDataFromDB.size() > 0) {
+            mEmoticonAdapter.updateList(pageDataFromDB, true);
+        } else {
+            mEmoticonAdapter.updateList(null, false);
+        }
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-    }
-
-    private void refreshData() {
-        getDataFromDB();
-        mEmoticonAdapter.notifyDataSetChanged();
-    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -341,9 +365,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "----ACTIVITYRESULT---");
             Constant.isDatabaseMotified = true;
             EmoticonBean bean = LitePal.findLast(EmoticonBean.class);
-            mEmoticonBeans.add(bean);
-            mEmoticonAdapter.notifyItemInserted(mEmoticonBeans.size() - 1);
-            checkEmpty();
+            mEmoticonAdapter.addItem(bean, mEmoticonAdapter.getRealItemCount() - 1);
         }
 
     }
@@ -368,7 +390,7 @@ public class MainActivity extends AppCompatActivity {
      * 检查当前内容是否为空，设置空界面
      */
     private void checkEmpty() {
-        if (mEmoticonBeans.isEmpty()) {
+        if (mEmoticonAdapter.getRealItemCount() == 0) {
             flEmptyContainer.setVisibility(View.VISIBLE);
         } else {
             flEmptyContainer.setVisibility(View.GONE);

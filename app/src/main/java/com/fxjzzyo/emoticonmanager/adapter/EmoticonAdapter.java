@@ -9,6 +9,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
@@ -24,16 +25,22 @@ import butterknife.ButterKnife;
 /**
  * Created by fanlulin on 2019-07-08.
  */
-public class EmoticonAdapter extends RecyclerView.Adapter<EmoticonAdapter.ViewHolder> {
+public class EmoticonAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     public static final String TAG = "EmoticonAdapter";
     private Context mContext;
     private List<EmoticonBean> mEmoticonBeans;
+    private boolean hasMore;
+    private static final int NORMAL_TYPE = 0;
+    private static final int FOOT_TYPE = 1;
+    private boolean isFootHide;
 
-    public EmoticonAdapter(List<EmoticonBean> emoticonBeans) {
+    public EmoticonAdapter(Context context, List<EmoticonBean> emoticonBeans, boolean hasMore) {
+        this.mContext = context;
+        this.hasMore = hasMore;
         this.mEmoticonBeans = emoticonBeans;
     }
 
-    class ViewHolder extends RecyclerView.ViewHolder {
+    class NormalHolder extends RecyclerView.ViewHolder {
 
         @BindView(R.id.iv_emoticon_img)
         ImageView emoticonImage;
@@ -42,59 +49,162 @@ public class EmoticonAdapter extends RecyclerView.Adapter<EmoticonAdapter.ViewHo
         @BindView(R.id.cv)
         CardView cardView;
 
-        public ViewHolder(@NonNull View itemView) {
+        public NormalHolder(@NonNull View itemView) {
             super(itemView);
             ButterKnife.bind(this, itemView);
         }
     }
 
-    @NonNull
-    @Override
-    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        if (mContext == null) {
-            mContext = parent.getContext();
-        }
-        View view = LayoutInflater.from(mContext).inflate(R.layout.emoticon_item, parent, false);
+    class FootViewHolder extends RecyclerView.ViewHolder {
 
-        return new ViewHolder(view);
+        @BindView(R.id.tv_foot)
+        TextView tvFoot;
+
+        public FootViewHolder(@NonNull View itemView) {
+            super(itemView);
+            ButterKnife.bind(this, itemView);
+        }
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        EmoticonBean emoticonBean = mEmoticonBeans.get(position);
-        holder.tvEmoticonContent.setText(emoticonBean.getEmoticonContent());
-        RequestOptions options = new RequestOptions()
-                .placeholder(R.mipmap.default_img)//图片加载出来前，显示的图片
-                .fallback( R.mipmap.default_img) //url为空的时候,显示的图片
-                .error(R.mipmap.default_img);//图片加载失败后，显示的图片
-        Glide.with(mContext).load(emoticonBean.getEmoticonImgURI()).apply(options).into(holder.emoticonImage);
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        if (viewType == NORMAL_TYPE) {
+            View view = LayoutInflater.from(mContext).inflate(R.layout.emoticon_item, parent, false);
+            return new NormalHolder(view);
+        } else {
+            View view = LayoutInflater.from(mContext).inflate(R.layout.foot_view, parent, false);
+            return new FootViewHolder(view);
+        }
+    }
 
-        if (onItemlickListener != null) {
-            holder.cardView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    onItemlickListener.onItemClick(view, holder.getLayoutPosition());
+    @Override
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+        if (holder instanceof NormalHolder) {// 正常的条目
+            NormalHolder normalHolder = (NormalHolder) holder;
+            EmoticonBean emoticonBean = mEmoticonBeans.get(position);
+            normalHolder.tvEmoticonContent.setText(emoticonBean.getEmoticonContent());
+            RequestOptions options = new RequestOptions()
+                    .placeholder(R.mipmap.default_img)// 图片加载出来前，显示的图片
+                    .fallback(R.mipmap.default_img) // url为空的时候,显示的图片
+                    .error(R.mipmap.default_img);// 图片加载失败后，显示的图片
+            Glide.with(mContext).load(emoticonBean.getEmoticonImgURI()).apply(options)
+                    .into(normalHolder.emoticonImage);
+
+            if (onItemlickListener != null) {
+                normalHolder.cardView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        onItemlickListener.onItemClick(view, holder.getLayoutPosition());
+                    }
+                });
+            }
+
+            if (onItemLongClickListener != null) {
+                normalHolder.cardView.setOnLongClickListener(new View.OnLongClickListener() {
+                    @Override
+                    public boolean onLongClick(View view) {
+                        onItemLongClickListener.onItemLongClick(view, holder.getLayoutPosition());
+                        return true;
+                    }
+                });
+            }
+        } else {// FootView 条目
+            FootViewHolder footViewHolder = (FootViewHolder) holder;
+            footViewHolder.tvFoot.setVisibility(View.VISIBLE);
+            if (hasMore) {
+                isFootHide = false;
+                if (mEmoticonBeans.size() > 0) {
+                    footViewHolder.tvFoot.setText("上拉加载更多哦");
                 }
-            });
+            } else {
+                isFootHide = true;
+                if (mEmoticonBeans.size() > 0) {
+                    footViewHolder.tvFoot.setText("没有更多数据了~");
+                }
+            }
+
         }
 
-        if (onItemLongClickListener != null) {
-            holder.cardView.setOnLongClickListener(new View.OnLongClickListener() {
-                @Override
-                public boolean onLongClick(View view) {
-                    onItemLongClickListener.onItemLongClick(view, holder.getLayoutPosition());
-                    return true;
+    }
+
+    /**
+     * 底部 Footview 横跨整行
+     *
+     * @param recyclerView
+     */
+    @Override
+    public void onAttachedToRecyclerView(@NonNull RecyclerView recyclerView) {
+        super.onAttachedToRecyclerView(recyclerView);
+
+        RecyclerView.LayoutManager layoutManager = recyclerView.getLayoutManager();
+        if (layoutManager != null && !(layoutManager instanceof GridLayoutManager)) return;
+
+        GridLayoutManager gridLayoutManager = (GridLayoutManager) layoutManager;
+        gridLayoutManager.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
+            @Override
+            public int getSpanSize(int position) {
+                if (mEmoticonBeans.size() == 0) {
+                    return gridLayoutManager.getSpanCount();
                 }
-            });
-        }
 
+                if (getItemViewType(position) == FOOT_TYPE) {
+                    return gridLayoutManager.getSpanCount();
+                }
+                return 1;
+            }
+        });
 
+    }
+
+    public int getRealItemCount() {
+        return mEmoticonBeans.size();
     }
 
 
     @Override
     public int getItemCount() {
-        return mEmoticonBeans.size();
+        return mEmoticonBeans.size() + 1;
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        if (position == getItemCount() - 1) {
+            return FOOT_TYPE;
+        } else {
+            return NORMAL_TYPE;
+        }
+    }
+
+
+    /**
+     * 更新列表
+     *
+     * @param newDatas
+     * @param hasMore
+     */
+    public void updateList(List<EmoticonBean> newDatas, boolean hasMore) {
+        // 在原有的数据之上增加新数据
+        if (newDatas != null) {
+            mEmoticonBeans.addAll(newDatas);
+        }
+        this.hasMore = hasMore;
+        notifyDataSetChanged();
+    }
+
+
+    public void addItem(EmoticonBean emoticonBean, int position) {
+        mEmoticonBeans.add(position, emoticonBean);
+        notifyItemInserted(position + 1);
+    }
+
+    public void updateItem(EmoticonBean emoticonBean, int position) {
+        mEmoticonBeans.get(position).setEmoticonContent(emoticonBean.getEmoticonContent());
+        notifyItemChanged(position);
+    }
+
+    public void removeItem(int position) {
+        mEmoticonBeans.remove(position);
+        notifyItemRemoved(position);
     }
 
 
@@ -115,5 +225,9 @@ public class EmoticonAdapter extends RecyclerView.Adapter<EmoticonAdapter.ViewHo
 
     public void setOnItemlickListener(OnItemClickListener onItemlickListener) {
         this.onItemlickListener = onItemlickListener;
+    }
+
+    public boolean isFootHide() {
+        return isFootHide;
     }
 }
