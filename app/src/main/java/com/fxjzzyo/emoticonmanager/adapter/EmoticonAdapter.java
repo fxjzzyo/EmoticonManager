@@ -12,6 +12,7 @@ import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.fxjzzyo.emoticonmanager.R;
 import com.fxjzzyo.emoticonmanager.bean.EmoticonBean;
 
@@ -62,8 +63,11 @@ public class EmoticonAdapter extends RecyclerView.Adapter<EmoticonAdapter.ViewHo
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         EmoticonBean emoticonBean = mEmoticonBeans.get(position);
         holder.tvEmoticonContent.setText(emoticonBean.getEmoticonContent());
-
-        Glide.with(mContext).load(emoticonBean.getEmoticonImgURI()).into(holder.emoticonImage);
+        RequestOptions options = new RequestOptions()
+                .placeholder(R.mipmap.default_img)//图片加载出来前，显示的图片
+                .fallback( R.mipmap.default_img) //url为空的时候,显示的图片
+                .error(R.mipmap.default_img);//图片加载失败后，显示的图片
+        Glide.with(mContext).load(emoticonBean.getEmoticonImgURI()).apply(options).into(holder.emoticonImage);
 
         if (onItemlickListener != null) {
             holder.cardView.setOnClickListener(new View.OnClickListener() {

@@ -33,6 +33,8 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.RequestBuilder;
+import com.bumptech.glide.request.RequestOptions;
 import com.fxjzzyo.emoticonmanager.R;
 import com.fxjzzyo.emoticonmanager.bean.EmoticonBean;
 import com.fxjzzyo.emoticonmanager.util.Constant;
@@ -205,6 +207,8 @@ public class AddEmoticonActivity extends AppCompatActivity {
     }
 
     private void startTake() {
+
+
         File outputImage = new File(getExternalCacheDir(), "output_img.jpg");
 
         try {
@@ -243,7 +247,6 @@ public class AddEmoticonActivity extends AppCompatActivity {
                         m.setRotate(90, (float) bm0.getWidth() / 2, (float) bm0.getHeight() / 2);
                         mBitmap = Bitmap.createBitmap(bm0, 0, 0, bm0.getWidth(), bm0.getHeight(), m, true);
                         Glide.with(this).load(mBitmap).into(ivImg);
-//                        ivImg.setImageBitmap(mBitmap);
                         isTakePhoto = true;
 
                     } catch (FileNotFoundException e) {
@@ -315,9 +318,11 @@ public class AddEmoticonActivity extends AppCompatActivity {
         Log.d(TAG, "imagePath--->" + imagePath);
 
         if (imagePath != null) {
-            Bitmap bitmap = BitmapFactory.decodeFile(imagePath);
-            Glide.with(this).load(imagePath).into(ivImg);
-//            ivImg.setImageBitmap(bitmap);
+            RequestOptions options = new RequestOptions()
+                    .placeholder(R.mipmap.default_img)//图片加载出来前，显示的图片
+                    .fallback( R.mipmap.default_img) //url为空的时候,显示的图片
+                    .error(R.mipmap.default_img);//图片加载失败后，显示的图片
+            Glide.with(this).load(imagePath).apply(options).into(ivImg);
             this.mImagePath = imagePath;
             isTakePhoto = false;
         } else {

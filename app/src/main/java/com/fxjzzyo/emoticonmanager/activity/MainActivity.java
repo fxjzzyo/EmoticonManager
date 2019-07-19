@@ -56,7 +56,8 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.fl_empty_container)
     FrameLayout flEmptyContainer;
 
-    private List<EmoticonBean> mEmoticonBeans = new ArrayList<>();;
+    private List<EmoticonBean> mEmoticonBeans = new ArrayList<>();
+    ;
 
     private EmoticonAdapter mEmoticonAdapter;
 
@@ -165,22 +166,18 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void initDatas() {
-        Log.d(TAG,"-------INITdatas------------");
         // 如果是安装后第一次启动应用，则检查是否有数据库备份文件
         // 取 sharepreference 赋值(Constant.isFirstLanch = true;
         Constant.isFirstLanch = SharedpreferencesUtil.getBoolean(this,SharedpreferencesUtil.KEY_FIRST_LANUCH);
-        Log.d(TAG,"-------INITdatas------------"+Constant.isFirstLanch);
-
         if (Constant.isFirstLanch) {
-
             Constant.isFirstLanch = false;
             // 存 sharepreference false
-            SharedpreferencesUtil.saveBoolean(this,SharedpreferencesUtil.KEY_FIRST_LANUCH,Constant.isFirstLanch);
+            SharedpreferencesUtil.saveBoolean(this, SharedpreferencesUtil.KEY_FIRST_LANUCH, Constant.isFirstLanch);
 
             boolean isBackupExist = FileUtil.isFileExist(FileUtil.getSDcardRootPath() +
                     File.separator + Constant.APPLICATION_NAME + File.separator + Constant.BACKUP_DIR_NAME
-                    +File.separator+Constant.DATABASE_NAME);
-            Log.d(TAG,"---BAckup---exist---"+isBackupExist);
+                    + File.separator + Constant.DATABASE_NAME);
+            Log.d(TAG, "---BAckup---exist---" + isBackupExist);
             if (isBackupExist) {
                 popRestoreDataDialog();
                 return;
@@ -227,7 +224,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
                 // 删除备份文件夹以及图片文件夹
-                FileUtil.deleteDirection(new File(FileUtil.getSDcardRootPath()+File.separator+
+                FileUtil.deleteDirection(new File(FileUtil.getSDcardRootPath() + File.separator +
                         Constant.APPLICATION_NAME));
                 // 取消对话框
                 dialogInterface.dismiss();
@@ -237,6 +234,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         AlertDialog dialog = builder.create();
+        dialog.setCancelable(false);
         dialog.show();
     }
 
@@ -307,19 +305,19 @@ public class MainActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {//6.0及以上
             Log.i("tag", "手机版本高于6.0，需要申请权限");
             if (ContextCompat.checkSelfPermission(this,
-                    Manifest.permission.CAMERA)
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     != PackageManager.PERMISSION_GRANTED) {
                 Log.i("tag", "没有权限");
                 if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                        Manifest.permission.CAMERA)) {
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
                     Log.i("tag", "上次点击了禁止，但没有勾选不再询问");
                     ActivityCompat.requestPermissions(this,
-                            new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                            new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,
                                     Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
                 } else {
                     Log.i("tag", "第一次启动，或者，上次点击了禁止，并勾选不再询问");
                     ActivityCompat.requestPermissions(this,
-                            new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                            new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,
                                     Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
                 }
             } else {
@@ -340,7 +338,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         if (resultCode == RESULT_OK) {
-            Log.d(TAG,"----ACTIVITYRESULT---");
+            Log.d(TAG, "----ACTIVITYRESULT---");
             Constant.isDatabaseMotified = true;
             EmoticonBean bean = LitePal.findLast(EmoticonBean.class);
             mEmoticonBeans.add(bean);
@@ -359,6 +357,7 @@ public class MainActivity extends AppCompatActivity {
                 if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
                     Log.i("tag", "" + "权限" + permissions[i] + "申请失败");
                     Toast.makeText(this, "" + "权限" + permissions[i] + "申请失败", Toast.LENGTH_SHORT).show();
+                    this.finish();
                 }
             }
             init();
@@ -378,8 +377,8 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        Log.d(TAG,"---db--motified---"+Constant.isDatabaseMotified);
-        if(Constant.isDatabaseMotified){
+        Log.d(TAG, "---db--motified---" + Constant.isDatabaseMotified);
+        if (Constant.isDatabaseMotified) {
             ProgressDialog dialog = new ProgressDialog(this);
             dialog.setTitle("数据备份中...");
             dialog.setCancelable(false);
@@ -387,7 +386,7 @@ public class MainActivity extends AppCompatActivity {
             backupTask.setBackupResultListener(new BackupTask.IBackupResultListener() {
                 @Override
                 public void backupSuccess(int type) {
-                    if(type == BackupTask.BACKUP_SUCCESS){
+                    if (type == BackupTask.BACKUP_SUCCESS) {
                         dialog.dismiss();
                         MainActivity.this.finish();
                     }
@@ -402,7 +401,7 @@ public class MainActivity extends AppCompatActivity {
             backupTask.execute(BackupTask.COMMAND_BACKUP);
             dialog.show();
 
-        }else {
+        } else {
             super.onBackPressed();
         }
 
