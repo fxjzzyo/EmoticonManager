@@ -194,7 +194,7 @@ public class EmoticonAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     public void addItem(EmoticonBean emoticonBean, int position) {
         mEmoticonBeans.add(position, emoticonBean);
-        notifyItemInserted(position + 1);
+        notifyItemInserted(position);
     }
 
     public void updateItem(EmoticonBean emoticonBean, int position) {

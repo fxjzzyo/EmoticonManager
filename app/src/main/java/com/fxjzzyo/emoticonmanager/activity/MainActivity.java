@@ -23,6 +23,7 @@ import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.View;
 import android.widget.EditText;
@@ -224,7 +225,7 @@ public class MainActivity extends AppCompatActivity {
     private void popRestoreDataDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("提示!");
-        builder.setMessage("检测到上次安装添加的表情\n是否恢复？");
+        builder.setMessage("检测到上次安装添加的表情，\n是否恢复？");
         builder.setPositiveButton("是", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
@@ -235,12 +236,13 @@ public class MainActivity extends AppCompatActivity {
                         if (type == BackupTask.RESTORE_SUCCESS) {
                             loadDatas();
                             mEmoticonAdapter.notifyDataSetChanged();
+                            checkEmpty();
                         }
                     }
 
                     @Override
                     public void backupFailed(int type) {
-                        loadDatas();
+
                     }
                 });
                 backupTask.execute(BackupTask.COMMAND_RESTORE);
@@ -365,7 +367,8 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "----ACTIVITYRESULT---");
             Constant.isDatabaseMotified = true;
             EmoticonBean bean = LitePal.findLast(EmoticonBean.class);
-            mEmoticonAdapter.addItem(bean, mEmoticonAdapter.getRealItemCount() - 1);
+            mEmoticonAdapter.addItem(bean, mEmoticonAdapter.getRealItemCount());
+            checkEmpty();
         }
 
     }
@@ -378,8 +381,11 @@ public class MainActivity extends AppCompatActivity {
             for (int i = 0; i < permissions.length; i++) {
                 if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
                     Log.i("tag", "" + "权限" + permissions[i] + "申请失败");
-                    Toast.makeText(this, "" + "权限" + permissions[i] + "申请失败", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this,
+                            "" + "授权失败\n请在设置中打开本应用的读写手机存储权限\n才能用哦~",
+                            Toast.LENGTH_LONG).show();
                     this.finish();
+                    return;
                 }
             }
             init();
