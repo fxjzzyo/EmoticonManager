@@ -80,13 +80,11 @@ public class FileUtil {
 
     /**
      * 删除单个文件
-     *
-     * @param path     文件所在的绝对路径
-     * @param fileName 文件名
+     * @param filePath    文件所在的绝对路径
      * @return 删除成功则返回true
      */
-    public static boolean deleteFile(String path, String fileName) {
-        File file = new File(path + File.separator + fileName);
+    public static boolean deleteFile(String filePath) {
+        File file = new File(filePath);
         return file.exists() && file.delete();
     }
 

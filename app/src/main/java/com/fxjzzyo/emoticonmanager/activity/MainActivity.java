@@ -156,9 +156,12 @@ public class MainActivity extends AppCompatActivity {
                     DialogInterface dialog,
                     int which) {// 确定按钮的响应事件
                 LitePal.delete(EmoticonBean.class, bean.getId());
+                // 删除本地图片文件
+                FileUtil.deleteFile(bean.getEmoticonImgURI());
                 mEmoticonAdapter.removeItem(position);
                 Constant.isDatabaseMotified = true;
                 checkEmpty();
+
             }
 
         })
