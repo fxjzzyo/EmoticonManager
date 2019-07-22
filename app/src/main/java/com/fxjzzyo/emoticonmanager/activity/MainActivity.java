@@ -66,6 +66,8 @@ public class MainActivity extends AppCompatActivity {
     private int pageCount = Constant.PAGE_COUNT;// 一次从数据库加载的数据个数
     private int lastVisibleItem;
 
+    private String  mQuery = "";// 查询的内容
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -121,11 +123,11 @@ public class MainActivity extends AppCompatActivity {
                 super.onScrollStateChanged(recyclerView, newState);
                 if (newState == RecyclerView.SCROLL_STATE_IDLE) {
                     if (mEmoticonAdapter.isFootHide() == false && lastVisibleItem + 1 == mEmoticonAdapter.getItemCount()) {
-                        updateRecyclerView(mEmoticonAdapter.getRealItemCount(), pageCount);
+                        updateRecyclerView(mQuery,mEmoticonAdapter.getRealItemCount(), pageCount);
                     }
 
                     if (mEmoticonAdapter.isFootHide() == true && lastVisibleItem + 2 == mEmoticonAdapter.getItemCount()) {
-                        updateRecyclerView(mEmoticonAdapter.getRealItemCount(), pageCount);
+                        updateRecyclerView(mQuery,mEmoticonAdapter.getRealItemCount(), pageCount);
                     }
                 }
 
@@ -218,7 +220,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadDatas() {
-        List<EmoticonBean> pageDataFromDB = getPageDataFromDB(0, pageCount);
+        List<EmoticonBean> pageDataFromDB = getPageDataFromDB("",0, pageCount);
         mEmoticonBeans.addAll(pageDataFromDB);
     }
 
@@ -272,19 +274,20 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * 从数据库分页获取数据
-     * @param startIndex
-     * @param pageCount
+     * @param query 查询的内容
+     * @param startIndex 开始位置
+     * @param pageCount 一页的数量
      * @return
      */
-    private List<EmoticonBean> getPageDataFromDB(int startIndex, int pageCount) {
-        List<EmoticonBean> emoticonBeans = LitePal.select(null)
+    private List<EmoticonBean> getPageDataFromDB(String query,int startIndex, int pageCount) {
+        List<EmoticonBean> emoticonBeans = LitePal.where("emoticonContent like ?", "%" + query + "%")
                 .limit(pageCount).offset(startIndex).find(EmoticonBean.class);
 
         return emoticonBeans;
     }
 
-    public void updateRecyclerView(int startIndex, int pageCount) {
-        List<EmoticonBean> pageDataFromDB = getPageDataFromDB(startIndex, pageCount);
+    public void updateRecyclerView(String query,int startIndex, int pageCount) {
+        List<EmoticonBean> pageDataFromDB = getPageDataFromDB(query,startIndex, pageCount);
         if (pageDataFromDB != null && pageDataFromDB.size() > 0) {
             mEmoticonAdapter.updateList(pageDataFromDB, true);
         } else {
@@ -306,13 +309,15 @@ public class MainActivity extends AppCompatActivity {
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
-                queryResult(query);
+                mQuery = query;
+                queryResult(mQuery,0,pageCount);
                 return false;
             }
 
             @Override
             public boolean onQueryTextChange(String newText) {
-                queryResult(newText);
+                mQuery = newText;
+                queryResult(mQuery,0,pageCount);
                 return false;
             }
         });
@@ -320,11 +325,15 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void queryResult(String query) {
-        List<EmoticonBean> beans = LitePal.where("emoticonContent like ?", "%" + query + "%").find(EmoticonBean.class);
-        mEmoticonBeans.clear();
-        mEmoticonBeans.addAll(beans);
-        mEmoticonAdapter.notifyDataSetChanged();
+    private void queryResult(String query,int start,int pageCount) {
+        List<EmoticonBean> beans = LitePal.where("emoticonContent like ?", "%" + query + "%")
+                .offset(start).limit(pageCount).find(EmoticonBean.class);
+        mEmoticonAdapter.clearList();
+        if(beans!=null && beans.size()>0){
+            mEmoticonAdapter.updateList(beans,true);
+        }else {
+            mEmoticonAdapter.updateList(null,false);
+        }
         checkEmpty();
     }
 
@@ -341,12 +350,12 @@ public class MainActivity extends AppCompatActivity {
                         Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
                     Log.i("tag", "上次点击了禁止，但没有勾选不再询问");
                     ActivityCompat.requestPermissions(this,
-                            new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                            new String[]{Manifest.permission.CAMERA,Manifest.permission.WRITE_EXTERNAL_STORAGE,
                                     Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
                 } else {
                     Log.i("tag", "第一次启动，或者，上次点击了禁止，并勾选不再询问");
                     ActivityCompat.requestPermissions(this,
-                            new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                            new String[]{Manifest.permission.CAMERA,Manifest.permission.WRITE_EXTERNAL_STORAGE,
                                     Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
                 }
             } else {

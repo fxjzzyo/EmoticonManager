@@ -178,12 +178,11 @@ public class EmoticonAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     /**
      * 更新列表
-     *
+     * 在原有的数据之上增加新数据
      * @param newDatas
      * @param hasMore
      */
     public void updateList(List<EmoticonBean> newDatas, boolean hasMore) {
-        // 在原有的数据之上增加新数据
         if (newDatas != null) {
             mEmoticonBeans.addAll(newDatas);
         }
@@ -191,6 +190,13 @@ public class EmoticonAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         notifyDataSetChanged();
     }
 
+    /**
+     * 清空列表
+     */
+    public void clearList(){
+        mEmoticonBeans.clear();
+        notifyDataSetChanged();
+    }
 
     public void addItem(EmoticonBean emoticonBean, int position) {
         mEmoticonBeans.add(position, emoticonBean);
