@@ -22,4 +22,5 @@ public class Constant {
     public static boolean isDatabaseMotified = false;
 
     public static int PAGE_COUNT = 20;// 一次从数据库加载的数据个数
+    public static int CONTENT_LENGTH_LIMIT = 10485760;// 用来分享的图片的长度限制(bytes.length)
 }

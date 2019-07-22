@@ -1,4 +1,13 @@
 <resources>
     <string name="app_name">表情加</string>
-    <string name="title_activity_main">Main2Activity</string>
+    <string name="app_name_eng">EmoticonManager</string>
+    <string name="please_add_image_description">请输入图片描述~</string>
+    <string name="please_add_image">请添加图片</string>
+    <string name="image_exist">图片已添加过哦~</string>
+    <string name="load_image_failed">加载图片失败~</string>
+    <string name="image_too_big">图片过大~</string>
+
+    <string name="weichat_not_exist">您还未安装微信客户端~</string>
+    <string name="check_network">请检查您的网络连接~</string>
+    <string name="permission_denied">授权失败\n请在设置中打开本应用的读写手机存储权限\n才能用哦~</string>
 </resources>

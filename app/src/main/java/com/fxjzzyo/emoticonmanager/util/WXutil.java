@@ -8,6 +8,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.fxjzzyo.emoticonmanager.MyApplication;
+import com.fxjzzyo.emoticonmanager.R;
 import com.tencent.mm.opensdk.modelmsg.SendMessageToWX;
 import com.tencent.mm.opensdk.modelmsg.WXEmojiObject;
 import com.tencent.mm.opensdk.modelmsg.WXImageObject;
@@ -27,12 +28,12 @@ public class WXutil {
     public static boolean shareImgToWx(Context context, String imgUri) {
 
         if (!MyApplication.api.isWXAppInstalled()) {
-            Toast.makeText(context, "您还未安装微信客户端", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, R.string.weichat_not_exist, Toast.LENGTH_SHORT).show();
             return false;
         }
 
         if (!Constant.isNetAvaiable) {
-            Toast.makeText(context, "请检查您的网络连接", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, R.string.check_network, Toast.LENGTH_SHORT).show();
             return false;
         }
 
@@ -90,14 +91,16 @@ public class WXutil {
 
         // 初始化 WXEmojiObject
         WXEmojiObject emojiObject = new WXEmojiObject();
-        if (imgUri.endsWith(".gif")) {
+        /*if (imgUri.endsWith(".gif")) {
             // gif 动图就直接从本地路径读取
             emojiObject.emojiPath = imgUri;
         } else {
             // 一般图片从本地读取后，压缩成 PNG格式 再发送
             Bitmap localImg = getLocalImg(imgUri);
             emojiObject.emojiData = bmpToByteArray(localImg, true);
-        }
+        }*/
+        // 图片直接从本地路径读取
+        emojiObject.emojiPath = imgUri;
 
         // 初始化 WXMediaMessage对象
         WXMediaMessage msg = new WXMediaMessage();
@@ -132,8 +135,8 @@ public class WXutil {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         int quality = 100;
         bmp.compress(Bitmap.CompressFormat.PNG, quality, output);
-        // 质量压缩，保证质量大于10的前提下，尽量压缩到 byte 长度不大于100kB
-        while (quality > 10 && output.toByteArray().length > 100) {
+        // 质量压缩，保证质量不小于10的前提下，尽量压缩到 byte 长度不大于最大长度
+        while (quality > 10 && output.toByteArray().length > Constant.CONTENT_LENGTH_LIMIT) {
             output.reset();
             quality -= 10;
             bmp.compress(Bitmap.CompressFormat.PNG, quality, output);
@@ -142,7 +145,7 @@ public class WXutil {
             bmp.recycle();
         }
         byte[] result = output.toByteArray();
-        Log.d("tag","---压缩后 byte 长度----"+result.length);
+        Log.d("tag", "---压缩后 byte 长度----" + result.length);
         try {
             output.close();
         } catch (Exception e) {

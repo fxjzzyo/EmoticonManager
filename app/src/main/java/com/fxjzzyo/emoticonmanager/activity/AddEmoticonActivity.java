@@ -5,17 +5,12 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
-import android.Manifest;
 import android.annotation.TargetApi;
 import android.content.ContentUris;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
@@ -33,20 +28,20 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.RequestBuilder;
 import com.bumptech.glide.request.RequestOptions;
 import com.fxjzzyo.emoticonmanager.R;
 import com.fxjzzyo.emoticonmanager.bean.EmoticonBean;
 import com.fxjzzyo.emoticonmanager.util.Constant;
 import com.fxjzzyo.emoticonmanager.util.FileUtil;
 
-import org.litepal.tablemanager.Connector;
+import org.litepal.LitePal;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -116,9 +111,9 @@ public class AddEmoticonActivity extends AppCompatActivity {
             return;
         }
         // 将图片路径写入数据库
-        if(writeImgPathToDB(imgPath)){
+        if (writeImgPathToDB(imgPath)) {
             setResult(RESULT_OK);
-        }else {
+        } else {
             setResult(RESULT_CANCELED);
         }
         // 返回 main activity
@@ -128,7 +123,7 @@ public class AddEmoticonActivity extends AppCompatActivity {
     private boolean checkContentEmpty() {
         mImgContent = etImgContent.getText().toString().trim();
         if (TextUtils.isEmpty(mImgContent)) {
-            Toast.makeText(this, "请输入图片描述~", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.please_add_image_description, Toast.LENGTH_SHORT).show();
             return true;
         }
         return false;
@@ -137,10 +132,18 @@ public class AddEmoticonActivity extends AppCompatActivity {
     private boolean checkImg() {
         if (TextUtils.isEmpty(mImagePath)) {
             Log.d(TAG, "--imgpath---" + mImagePath);
-            Toast.makeText(this, "请添加图片~", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.please_add_image, Toast.LENGTH_SHORT).show();
             return false;
-        }else if(mImagePath.equals("image_exist")){
-            Toast.makeText(this, "图片已存在~", Toast.LENGTH_SHORT).show();
+        } else if (mImagePath.equals("image_exist")) {
+            Toast.makeText(this, R.string.image_exist, Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        // todo
+        // 对于图片(包括gif图片)过大的问题,暂时这样处理 后续考虑研究一下 gif 图片压缩
+        // 普通图片的质量压缩，越压越大，算了，不压了
+        int len = FileUtil.getFileSize(mImagePath);
+        if (len > Constant.CONTENT_LENGTH_LIMIT) {
+            Toast.makeText(AddEmoticonActivity.this, R.string.image_too_big, Toast.LENGTH_LONG).show();
             return false;
         }
         return true;
@@ -162,12 +165,12 @@ public class AddEmoticonActivity extends AppCompatActivity {
     private String copyImgToLocal() {
         if (mImagePath != null) {
             int copyResult = FileUtil.copyImageFile(mImagePath, getImgFoldPath());
-            if ( 1 == copyResult) {
-                String imgName = mImagePath.substring(mImagePath.lastIndexOf("/"));
+            if (1 == copyResult) {
+                String imgName = mImagePath.substring(mImagePath.lastIndexOf(File.separator));
                 return getImgFoldPath() + imgName;
-            }else if(2 == copyResult){
+            } else if (2 == copyResult) {
                 return "image_exist";
-            }else if(0 == copyResult){
+            } else if (0 == copyResult) {
                 return "image_exist";
             }
         }
@@ -177,7 +180,7 @@ public class AddEmoticonActivity extends AppCompatActivity {
     private String getImgFoldPath() {
         // /storage/emulated/0/EmoticonManager/EmoticonManagerImages
         return FileUtil.getSDcardRootPath() + File.separator + Constant.APPLICATION_NAME
-                +File.separator+Constant.IMAGE_DIR_NAME;
+                + File.separator + Constant.IMAGE_DIR_NAME;
     }
 
     private String saveImgToLocal(Bitmap bitmap) {
@@ -320,13 +323,21 @@ public class AddEmoticonActivity extends AppCompatActivity {
         if (imagePath != null) {
             RequestOptions options = new RequestOptions()
                     .placeholder(R.mipmap.default_img)//图片加载出来前，显示的图片
-                    .fallback( R.mipmap.default_img) //url为空的时候,显示的图片
+                    .fallback(R.mipmap.default_img) //url为空的时候,显示的图片
                     .error(R.mipmap.default_img);//图片加载失败后，显示的图片
             Glide.with(this).load(imagePath).apply(options).into(ivImg);
             this.mImagePath = imagePath;
             isTakePhoto = false;
+            // 判断图片是否已经添加过
+            String imgName = imagePath.substring(imagePath.lastIndexOf(File.separator));
+            String localImgPath = getImgFoldPath() + imgName;
+            List<EmoticonBean> emoticonBeans = LitePal.where("emoticonImgURI like ?", localImgPath).find(EmoticonBean.class);
+            if (emoticonBeans != null && emoticonBeans.size() != 0) {
+                Toast.makeText(this, R.string.image_exist, Toast.LENGTH_LONG).show();
+            }
+
         } else {
-            Toast.makeText(this, "failed to get image", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.load_image_failed, Toast.LENGTH_SHORT).show();
         }
     }
 

@@ -90,11 +90,11 @@ public class EmoticonAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             Glide.with(mContext).load(emoticonBean.getEmoticonImgURI()).apply(options)
                     .into(normalHolder.emoticonImage);
 
-            if (onItemlickListener != null) {
+            if (onItemClickListener != null) {
                 normalHolder.cardView.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-                        onItemlickListener.onItemClick(view, holder.getLayoutPosition());
+                        onItemClickListener.onItemClick(view, holder.getLayoutPosition());
                     }
                 });
             }
@@ -114,7 +114,7 @@ public class EmoticonAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             if (hasMore) {
                 isFootHide = false;
                 if (mEmoticonBeans.size() > 0) {
-                    footViewHolder.tvFoot.setText("上拉加载更多哦");
+                    footViewHolder.tvFoot.setText("上拉加载更多哦~");
                 }
             } else {
                 isFootHide = true;
@@ -223,14 +223,14 @@ public class EmoticonAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     }
 
     private OnItemLongClickListener onItemLongClickListener;
-    private OnItemClickListener onItemlickListener;
+    private OnItemClickListener onItemClickListener;
 
     public void setOnItemLongClickListener(OnItemLongClickListener onItemLongClickListener) {
         this.onItemLongClickListener = onItemLongClickListener;
     }
 
-    public void setOnItemlickListener(OnItemClickListener onItemlickListener) {
-        this.onItemlickListener = onItemlickListener;
+    public void setOnItemClickListener(OnItemClickListener onItemClickListener) {
+        this.onItemClickListener = onItemClickListener;
     }
 
     public boolean isFootHide() {

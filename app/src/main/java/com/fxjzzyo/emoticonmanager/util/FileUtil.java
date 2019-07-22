@@ -36,15 +36,17 @@ public class FileUtil {
      * 获取应用相关的sd卡目录路径
      * /storage/emulated/0/Android/data/包名/files
      * 如果应用卸载了，那么它也没了
+     *
      * @param context
      * @return
      */
-    public static String getFileRootPath(Context context){
+    public static String getFileRootPath(Context context) {
         return context.getExternalFilesDir(null).getAbsolutePath();
     }
 
     /**
      * 创建目录
+     *
      * @param path 目录的绝对路径
      * @return 创建成功则返回true
      */
@@ -80,7 +82,8 @@ public class FileUtil {
 
     /**
      * 删除单个文件
-     * @param filePath    文件所在的绝对路径
+     *
+     * @param filePath 文件所在的绝对路径
      * @return 删除成功则返回true
      */
     public static boolean deleteFile(String filePath) {
@@ -90,11 +93,12 @@ public class FileUtil {
 
     /**
      * 判断某个文件是否存在
+     *
      * @param filePath
      * @return
      */
-    public static boolean isFileExist(String filePath){
-         File file = new File(filePath);
+    public static boolean isFileExist(String filePath) {
+        File file = new File(filePath);
         return file.exists();
     }
 
@@ -120,6 +124,7 @@ public class FileUtil {
 
     /**
      * 拷贝一个文件到另一个文件
+     *
      * @param srcPath
      * @param destDirPath
      * @return
@@ -146,6 +151,7 @@ public class FileUtil {
 
     /**
      * 拷贝文件
+     *
      * @param srcPath     绝对路径
      * @param destDirPath 目标文件所在目录的路径
      * @return int true拷贝成功 0:拷贝失败；1：拷贝成功；2：图片已存在
@@ -175,7 +181,6 @@ public class FileUtil {
             return 2;
         }
 
-
         try {
             FileInputStream fis = new FileInputStream(srcPath);
             FileOutputStream fos = new FileOutputStream(destFile);
@@ -191,6 +196,7 @@ public class FileUtil {
         }
         return 1;
     }
+
 
     /**
      * 获取某个路径下的文件列表
@@ -236,6 +242,21 @@ public class FileUtil {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    /**
+     * 获取文件的大小
+     *
+     * @param var1
+     * @return
+     */
+    public static int getFileSize(String var1) {
+        if (var1 != null && var1.length() != 0) {
+            File var2;
+            return !(var2 = new File(var1)).exists() ? 0 : (int) var2.length();
+        } else {
+            return 0;
         }
     }
 
