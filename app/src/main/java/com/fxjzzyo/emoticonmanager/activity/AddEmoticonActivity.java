@@ -8,6 +8,7 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.FileProvider;
 
 import android.annotation.TargetApi;
+import android.app.ProgressDialog;
 import android.content.ContentUris;
 import android.content.Intent;
 import android.database.Cursor;
@@ -23,8 +24,10 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
@@ -59,6 +62,8 @@ public class AddEmoticonActivity extends AppCompatActivity {
     EditText etImgContent;
     @BindView(R.id.tl)
     Toolbar toolbar;
+    @BindView(R.id.pb_loading)
+    ProgressBar mPb;
 
     private Uri imageUri;// 拍照获得的临时图片uri
     private Bitmap mBitmap;// 拍照获得的临时图片
@@ -92,32 +97,42 @@ public class AddEmoticonActivity extends AppCompatActivity {
 
     @OnClick(R.id.btn_confirm)
     public void confirm() {
+
         Log.d(TAG, "btn confirm");
         // 检查内容描述
         if (checkContentEmpty()) {
             return;
         }
-        String imgPath = null;
+        mPb.setVisibility(View.VISIBLE);
         if (isTakePhoto) {
             // 保存图片到本应用的图片目录下
-            imgPath = saveImgToLocal(mBitmap);
+            saveImgToLocal(mBitmap);
         } else {
             // 拷贝图片到本应用的图片目录下
-            imgPath = copyImgToLocal();
+            copyImgToLocal();
         }
-        this.mImagePath = imgPath;
+
+    }
+
+    /**
+     * 点击确认按钮后的收尾工作
+     *
+     */
+    private void onPostConfirm(){
         // 检查图片
         if (!checkImg()) {
+            mPb.setVisibility(View.GONE);
             return;
         }
         // 将图片路径写入数据库
-        if (writeImgPathToDB(imgPath)) {
+        if (writeImgPathToDB(mImagePath)) {
             setResult(RESULT_OK);
         } else {
             setResult(RESULT_CANCELED);
         }
+        mPb.setVisibility(View.GONE);
         // 返回 main activity
-        this.finish();
+        AddEmoticonActivity.this.finish();
     }
 
     private boolean checkContentEmpty() {
@@ -131,16 +146,13 @@ public class AddEmoticonActivity extends AppCompatActivity {
 
     private boolean checkImg() {
         if (TextUtils.isEmpty(mImagePath)) {
-            Log.d(TAG, "--imgpath---" + mImagePath);
             Toast.makeText(this, R.string.please_add_image, Toast.LENGTH_SHORT).show();
             return false;
         } else if (mImagePath.equals("image_exist")) {
             Toast.makeText(this, R.string.image_exist, Toast.LENGTH_SHORT).show();
             return false;
         }
-        // todo
-        // 对于图片(包括gif图片)过大的问题,暂时这样处理 后续考虑研究一下 gif 图片压缩
-        // 普通图片的质量压缩，越压越大，算了，不压了
+        // 虽然已经压缩过了，但保险起见，再做一次判断
         int len = FileUtil.getFileSize(mImagePath);
         if (len > Constant.CONTENT_LENGTH_LIMIT) {
             Toast.makeText(AddEmoticonActivity.this, R.string.image_too_big, Toast.LENGTH_LONG).show();
@@ -155,27 +167,40 @@ public class AddEmoticonActivity extends AppCompatActivity {
      * @param imgPath
      */
     private boolean writeImgPathToDB(String imgPath) {
-        Log.d(TAG, "--todb--img--path---" + imgPath);
         EmoticonBean emoticonBean = new EmoticonBean();
         emoticonBean.setEmoticonContent(mImgContent);
         emoticonBean.setEmoticonImgURI(imgPath);
         return emoticonBean.save();
     }
 
-    private String copyImgToLocal() {
-        if (mImagePath != null) {
-            int copyResult = FileUtil.copyImageFile(mImagePath, getImgFoldPath());
-            if (1 == copyResult) {
-                String imgName = mImagePath.substring(mImagePath.lastIndexOf(File.separator));
-                return getImgFoldPath() + imgName;
-            } else if (2 == copyResult) {
-                return "image_exist";
-            } else if (0 == copyResult) {
-                return "image_exist";
-            }
+    private void copyImgToLocal() {
+        if (mImagePath == null) {
+            return;
         }
-        return null;
+        FileUtil.getInstance(this).copyImageFileInThread(mImagePath, getImgFoldPath())
+                .setFileOperateCallback(new FileUtil.FileOperateCallback() {
+                    @Override
+                    public void onSuccess(String result) {
+                        if ("1".equals(result)) {
+                            String imgName = mImagePath.substring(mImagePath.lastIndexOf(File.separator));
+                            mImagePath = getImgFoldPath() + imgName;
+                        } else if ("2".equals(result)) {
+                            mImagePath = "image_exist";
+                        } else if ("3".equals(result)) {
+                            mImagePath = "image_exist";
+                        }
+                        onPostConfirm();
+
+                    }
+
+                    @Override
+                    public void onFailed(String error) {
+
+                    }
+                });
+
     }
+
 
     private String getImgFoldPath() {
         // /storage/emulated/0/EmoticonManager/EmoticonManagerImages
@@ -183,16 +208,25 @@ public class AddEmoticonActivity extends AppCompatActivity {
                 + File.separator + Constant.IMAGE_DIR_NAME;
     }
 
-    private String saveImgToLocal(Bitmap bitmap) {
+    private void saveImgToLocal(Bitmap bitmap) {
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd-HHmmss");
         String t = format.format(new Date());
         String imgName = t + ".jpg";
-        Log.d(TAG, "---imgName----" + imgName);
-        Log.d(TAG, "---imgfoldPath----" + getImgFoldPath());
-        FileUtil.saveBitmapToFile(bitmap, getImgFoldPath(), imgName);
-        // 记录图片在本地的路径
-        String path = getImgFoldPath() + File.separator + imgName;
-        return path;
+
+        FileUtil.getInstance(this).saveBitmapToFileInThread(bitmap,getImgFoldPath(),imgName)
+                .setFileOperateCallback(new FileUtil.FileOperateCallback() {
+                    @Override
+                    public void onSuccess(String result) {
+                        // 记录图片在本地的路径
+                        mImagePath = getImgFoldPath() + File.separator + imgName;
+                        onPostConfirm();
+                    }
+
+                    @Override
+                    public void onFailed(String error) {
+
+                    }
+                });
     }
 
     @OnClick(R.id.btn_cancel)
@@ -210,7 +244,6 @@ public class AddEmoticonActivity extends AppCompatActivity {
     }
 
     private void startTake() {
-
 
         File outputImage = new File(getExternalCacheDir(), "output_img.jpg");
 
@@ -243,7 +276,6 @@ public class AddEmoticonActivity extends AppCompatActivity {
                 if (resultCode == RESULT_OK) {
                     // 将拍摄的照片显示出来
                     try {
-                        Log.d(TAG, "----imageuri-----" + imageUri);
                         Bitmap bm0 = BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri));
                         // 旋转90度
                         Matrix m = new Matrix();
@@ -318,8 +350,6 @@ public class AddEmoticonActivity extends AppCompatActivity {
     }
 
     private void displayImage(String imagePath) {
-        Log.d(TAG, "imagePath--->" + imagePath);
-
         if (imagePath != null) {
             RequestOptions options = new RequestOptions()
                     .placeholder(R.mipmap.default_img)//图片加载出来前，显示的图片
